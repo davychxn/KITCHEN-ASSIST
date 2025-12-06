@@ -1,6 +1,6 @@
 """
 Create a neat workflow diagram PowerPoint presentation
-for the Pan/Pot State Detection System
+for the Pan/Pot State Detection System - Updated with latest workflow
 """
 
 from pptx import Presentation
@@ -8,6 +8,9 @@ from pptx.util import Inches, Pt
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pathlib import Path
+from PIL import Image
+import json
 
 
 def add_rounded_rectangle(slide, left, top, width, height, text, fill_color, text_color=(255, 255, 255)):
@@ -113,12 +116,42 @@ def create_workflow_presentation():
         Inches(1), Inches(3.8), Inches(11.33), Inches(0.6)
     )
     subtitle_frame = subtitle_box.text_frame
-    subtitle_frame.text = "AI-Powered Kitchen Safety Workflow"
+    subtitle_frame.text = "MobileNet v2 Powered Kitchen Safety Detection"
     for paragraph in subtitle_frame.paragraphs:
         paragraph.alignment = PP_ALIGN.CENTER
         for run in paragraph.runs:
             run.font.size = Pt(24)
             run.font.color.rgb = RGBColor(100, 100, 100)
+    
+    # Add stats
+    stats_y = Inches(4.8)
+    stats = [
+        ("100% Training Accuracy", (76, 175, 80)),
+        ("MobileNet v2 - 3.5M Params", (33, 150, 243)),
+        ("Color-Optimized Detection", (255, 152, 0))
+    ]
+    
+    x_start = Inches(2.5)
+    spacing = Inches(3)
+    
+    for i, (stat, color) in enumerate(stats):
+        stat_box = slide1.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            x_start + i * spacing, stats_y, Inches(2.5), Inches(0.6)
+        )
+        stat_box.fill.solid()
+        stat_box.fill.fore_color.rgb = RGBColor(*color)
+        stat_box.line.width = Pt(0)
+        
+        text_frame = stat_box.text_frame
+        text_frame.text = stat
+        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+        for paragraph in text_frame.paragraphs:
+            paragraph.alignment = PP_ALIGN.CENTER
+            for run in paragraph.runs:
+                run.font.size = Pt(13)
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(255, 255, 255)
     
     # ==================== Slide 2: Overall Workflow ====================
     slide2 = prs.slides.add_slide(title_slide_layout)
@@ -148,14 +181,18 @@ def create_workflow_presentation():
     color_classify = (50, 205, 50)     # Lime green
     color_output = (220, 20, 60)       # Crimson
     
-    # Box dimensions
+    # Box dimensions - adjusted for better spacing
     box_width = Inches(2.2)
     box_height = Inches(1)
     y_start = Inches(2)
-    x_spacing = Inches(2.8)
+    x_spacing = Inches(0.4)  # Reduced spacing between boxes
+    
+    # Calculate total width and center the workflow
+    total_width = 4 * box_width + 3 * x_spacing
+    x_start = (Inches(13.33) - total_width) / 2  # Center horizontally
     
     # Step 1: Input Image
-    x1 = Inches(1)
+    x1 = x_start
     box1 = add_rounded_rectangle(
         slide2, x1, y_start, box_width, box_height,
         "Input Image\n(Kitchen Camera)", color_input
@@ -172,7 +209,7 @@ def create_workflow_presentation():
     x3 = x2 + box_width + x_spacing
     box3 = add_rounded_rectangle(
         slide2, x3, y_start, box_width, box_height,
-        "State Classification\n(ResNet50)", color_classify
+        "State Classification\n(MobileNet v2)", color_classify
     )
     
     # Step 4: Output
@@ -306,7 +343,7 @@ def create_workflow_presentation():
     y_pos += spacing
     
     add_rounded_rectangle(slide3, x_mid, y_pos, box_w, box_h,
-                         "Train Classifier\n(train_classifier.py)", (144, 238, 144), (0, 0, 0))
+                         "Train Classifier\n(MobileNet v2)", (144, 238, 144), (0, 0, 0))
     y_pos += spacing
     
     add_rounded_rectangle(slide3, x_mid, y_pos, box_w, box_h,
@@ -370,11 +407,11 @@ def create_workflow_presentation():
     # Features
     features = [
         ("🎯 Automatic Detection", "YOLO v8 for pan/pot localization"),
-        ("🧠 Deep Learning", "ResNet50 transfer learning"),
-        ("📊 High Accuracy", "100% on verification set"),
+        ("🧠 Lightweight Model", "MobileNet v2 (3.5M params)"),
+        ("📊 High Accuracy", "100% on training set"),
         ("🖼️ Visual Feedback", "Green wireframe marking"),
-        ("⚡ Real-time Ready", "Optimized inference pipeline"),
-        ("📈 Continuous Learning", "Easy retraining workflow")
+        ("🎨 Color Optimized", "Preserves critical color features"),
+        ("⚡ Fast Inference", "Optimized for edge devices")
     ]
     
     y_feature = Inches(1.5)
@@ -413,9 +450,311 @@ def create_workflow_presentation():
             run.font.size = Pt(13)
             run.font.color.rgb = RGBColor(60, 60, 60)
     
+    # ==================== Slide 5: Prediction Results ====================
+    slide5 = prs.slides.add_slide(title_slide_layout)
+    
+    # Background
+    background = slide5.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(250, 250, 250)
+    
+    # Title
+    title_box = slide5.shapes.add_textbox(
+        Inches(0.5), Inches(0.3), Inches(12.33), Inches(0.6)
+    )
+    title_frame = title_box.text_frame
+    title_frame.text = "Model Performance & Predictions"
+    for paragraph in title_frame.paragraphs:
+        paragraph.alignment = PP_ALIGN.CENTER
+        for run in paragraph.runs:
+            run.font.size = Pt(32)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 51, 102)
+    
+    # Load prediction results if available
+    predictions_file = Path('./veri_results_marked/predictions.json')
+    if predictions_file.exists():
+        with open(predictions_file, 'r') as f:
+            predictions = json.load(f)
+        
+        # Overall accuracy box
+        accuracy_box = slide5.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            Inches(0.8), Inches(1.2), Inches(3), Inches(1.2)
+        )
+        accuracy_box.fill.solid()
+        accuracy_box.fill.fore_color.rgb = RGBColor(76, 175, 80)  # Green
+        accuracy_box.line.color.rgb = RGBColor(56, 142, 60)
+        accuracy_box.line.width = Pt(2)
+        
+        text_frame = accuracy_box.text_frame
+        text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+        
+        # Training accuracy
+        p1 = text_frame.paragraphs[0]
+        p1.text = "Training Accuracy"
+        p1.alignment = PP_ALIGN.CENTER
+        for run in p1.runs:
+            run.font.size = Pt(16)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        p2 = text_frame.add_paragraph()
+        p2.text = "100%"
+        p2.alignment = PP_ALIGN.CENTER
+        for run in p2.runs:
+            run.font.size = Pt(48)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Model info box
+        model_box = slide5.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            Inches(4.2), Inches(1.2), Inches(4), Inches(1.2)
+        )
+        model_box.fill.solid()
+        model_box.fill.fore_color.rgb = RGBColor(33, 150, 243)  # Blue
+        model_box.line.color.rgb = RGBColor(21, 101, 192)
+        model_box.line.width = Pt(2)
+        
+        text_frame = model_box.text_frame
+        text_frame.clear()
+        
+        p1 = text_frame.paragraphs[0]
+        p1.text = "Model Architecture"
+        p1.alignment = PP_ALIGN.CENTER
+        for run in p1.runs:
+            run.font.size = Pt(16)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        p2 = text_frame.add_paragraph()
+        p2.text = "MobileNet v2"
+        p2.alignment = PP_ALIGN.CENTER
+        for run in p2.runs:
+            run.font.size = Pt(24)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        p3 = text_frame.add_paragraph()
+        p3.text = "~3.5M parameters"
+        p3.alignment = PP_ALIGN.CENTER
+        for run in p3.runs:
+            run.font.size = Pt(14)
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Verification results box
+        correct_preds = sum(1 for p in predictions if p.get('correct', False))
+        total_preds = len([p for p in predictions if 'correct' in p])
+        
+        if total_preds > 0:
+            verify_box = slide5.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(8.6), Inches(1.2), Inches(3.5), Inches(1.2)
+            )
+            verify_box.fill.solid()
+            verify_box.fill.fore_color.rgb = RGBColor(255, 152, 0)  # Orange
+            verify_box.line.color.rgb = RGBColor(230, 81, 0)
+            verify_box.line.width = Pt(2)
+            
+            text_frame = verify_box.text_frame
+            text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            
+            p1 = text_frame.paragraphs[0]
+            p1.text = "Verification Set"
+            p1.alignment = PP_ALIGN.CENTER
+            for run in p1.runs:
+                run.font.size = Pt(16)
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(255, 255, 255)
+            
+            verify_acc = (correct_preds / total_preds * 100) if total_preds > 0 else 0
+            p2 = text_frame.add_paragraph()
+            p2.text = f"{verify_acc:.0f}% ({correct_preds}/{total_preds})"
+            p2.alignment = PP_ALIGN.CENTER
+            for run in p2.runs:
+                run.font.size = Pt(36)
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Add prediction examples table
+        y_table = Inches(2.6)
+        
+        # Table header
+        header_box = slide5.shapes.add_textbox(
+            Inches(0.8), y_table, Inches(11.5), Inches(0.4)
+        )
+        header_frame = header_box.text_frame
+        header_frame.text = "Sample Predictions"
+        for paragraph in header_frame.paragraphs:
+            paragraph.alignment = PP_ALIGN.LEFT
+            for run in paragraph.runs:
+                run.font.size = Pt(18)
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(0, 51, 102)
+        
+        # Prediction rows
+        y_pos = y_table + Inches(0.5)
+        for i, pred in enumerate(predictions[:4]):  # Show first 4 predictions
+            # Filename
+            filename_box = slide5.shapes.add_textbox(
+                Inches(0.8), y_pos, Inches(3.5), Inches(0.5)
+            )
+            text_frame = filename_box.text_frame
+            text_frame.text = pred['filename'][:35] + ('...' if len(pred['filename']) > 35 else '')
+            text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            for paragraph in text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.size = Pt(11)
+            
+            # Predicted state
+            pred_box = slide5.shapes.add_textbox(
+                Inches(4.5), y_pos, Inches(2), Inches(0.5)
+            )
+            text_frame = pred_box.text_frame
+            text_frame.text = f"Pred: {pred['predicted_state']}"
+            text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            for paragraph in text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.size = Pt(12)
+                    run.font.bold = True
+            
+            # Confidence
+            conf_box = slide5.shapes.add_textbox(
+                Inches(6.7), y_pos, Inches(1.5), Inches(0.5)
+            )
+            text_frame = conf_box.text_frame
+            conf = pred['confidence']
+            text_frame.text = f"{conf:.1%}"
+            text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            for paragraph in text_frame.paragraphs:
+                paragraph.alignment = PP_ALIGN.CENTER
+                for run in paragraph.runs:
+                    run.font.size = Pt(12)
+            
+            # Status (if available)
+            if 'correct' in pred:
+                status_text = "✓" if pred['correct'] else "✗"
+                status_color = RGBColor(76, 175, 80) if pred['correct'] else RGBColor(244, 67, 54)
+                
+                status_box = slide5.shapes.add_textbox(
+                    Inches(8.4), y_pos, Inches(0.6), Inches(0.5)
+                )
+                text_frame = status_box.text_frame
+                text_frame.text = status_text
+                text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+                for paragraph in text_frame.paragraphs:
+                    paragraph.alignment = PP_ALIGN.CENTER
+                    for run in paragraph.runs:
+                        run.font.size = Pt(20)
+                        run.font.bold = True
+                        run.font.color.rgb = status_color
+            
+            y_pos += Inches(0.6)
+    
+    # ==================== Slide 6: Marked Images ====================
+    slide6 = prs.slides.add_slide(title_slide_layout)
+    
+    # Background
+    background = slide6.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(250, 250, 250)
+    
+    # Title
+    title_box = slide6.shapes.add_textbox(
+        Inches(0.5), Inches(0.3), Inches(12.33), Inches(0.6)
+    )
+    title_frame = title_box.text_frame
+    title_frame.text = "Marked Detection Results"
+    for paragraph in title_frame.paragraphs:
+        paragraph.alignment = PP_ALIGN.CENTER
+        for run in paragraph.runs:
+            run.font.size = Pt(32)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 51, 102)
+    
+    # Add marked images if available - all images scaled to similar sizes
+    marked_dir = Path('./veri_results_marked')
+    if marked_dir.exists():
+        marked_images = sorted(list(marked_dir.glob('*_marked.jpg')))[:4]  # First 4 images
+        
+        if marked_images:
+            # First pass: find dimensions to normalize all images to similar sizes
+            image_dims = []
+            for img_path in marked_images:
+                try:
+                    with Image.open(img_path) as img:
+                        image_dims.append((img.size[0], img.size[1]))
+                except:
+                    image_dims.append((800, 600))
+            
+            # Use average aspect ratio to determine uniform size
+            avg_aspect = sum(w/h for w, h in image_dims) / len(image_dims)
+            
+            # Set uniform target size based on available space
+            if avg_aspect > 1.5:  # Wider images
+                target_width = Inches(5.8)
+                target_height = Inches(target_width.inches / avg_aspect)
+            else:  # More square or taller images
+                target_height = Inches(2.6)
+                target_width = Inches(target_height.inches * avg_aspect)
+            
+            # Add images in 2x2 grid with uniform sizes
+            x_positions = [Inches(0.8), Inches(7.2)]
+            y_positions = [Inches(1.2), Inches(4.2)]
+            
+            for idx, img_path in enumerate(marked_images):
+                if idx >= 4:
+                    break
+                row = idx // 2
+                col = idx % 2
+                x = x_positions[col]
+                y = y_positions[row]
+                
+                try:
+                    # Add image with uniform size
+                    pic = slide6.shapes.add_picture(
+                        str(img_path), x, y, width=target_width, height=target_height
+                    )
+                    
+                    # Add caption below the image
+                    caption_box = slide6.shapes.add_textbox(
+                        x, y + target_height + Inches(0.05), target_width, Inches(0.3)
+                    )
+                    caption_frame = caption_box.text_frame
+                    caption_text = img_path.stem.replace('_marked', '').replace('_', ' ')
+                    caption_frame.text = caption_text[:40] + ('...' if len(caption_text) > 40 else '')
+                    for paragraph in caption_frame.paragraphs:
+                        paragraph.alignment = PP_ALIGN.CENTER
+                        for run in paragraph.runs:
+                            run.font.size = Pt(10)
+                            run.font.color.rgb = RGBColor(80, 80, 80)
+                except Exception as e:
+                    print(f"Could not add image {img_path.name}: {e}")
+        else:
+            # No images message
+            msg_box = slide6.shapes.add_textbox(
+                Inches(2), Inches(3), Inches(9), Inches(1)
+            )
+            msg_frame = msg_box.text_frame
+            msg_frame.text = "Run predict_veri.py to generate marked images"
+            msg_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+            for paragraph in msg_frame.paragraphs:
+                paragraph.alignment = PP_ALIGN.CENTER
+                for run in paragraph.runs:
+                    run.font.size = Pt(24)
+                    run.font.color.rgb = RGBColor(150, 150, 150)
+    
     # Save presentation
     prs.save('Kitchen_Assist_Workflow.pptx')
     print("✓ PowerPoint presentation created: Kitchen_Assist_Workflow.pptx")
+    print(f"  - Total slides: {len(prs.slides)}")
+    if predictions_file.exists():
+        print(f"  - Included {len(predictions)} prediction results")
+    if marked_dir.exists() and marked_images:
+        print(f"  - Included {len(marked_images)} marked images")
 
 
 if __name__ == "__main__":

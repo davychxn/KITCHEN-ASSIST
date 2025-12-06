@@ -18,7 +18,8 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
                         output_dir='./veri_results_marked',
                         crop_coords_file='./pics_cropped/crop_coords.json',
                         show_ground_truth=True,
-                        output_width=1280):
+                        output_width=1280,
+                        resize_for_prediction=224):
     """
     Predict states for verification images and mark detected areas with green wireframes
     
@@ -29,6 +30,7 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
         crop_coords_file: JSON file with crop coordinates (optional)
         show_ground_truth: Whether to show ground truth labels (if filename contains state)
         output_width: Target width for output images (height auto-calculated to maintain aspect ratio)
+        resize_for_prediction: Resize images to this size before prediction (to match training, 224 for MobileNet)
     """
     
     output_dir = Path(output_dir)
@@ -87,8 +89,22 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
         # Load original image
         img = cv2.imread(str(img_path))
         if img is None:
-            print(f"  ✗ Error: Could not load image, skipping...\n")
+            print(f"Warning: Could not load {img_path}, skipping...")
             continue
+        
+        # Store original size for visualization
+        original_img = img.copy()
+        
+        # Resize for prediction to match training size
+        if resize_for_prediction:
+            img_for_pred = cv2.resize(img, (resize_for_prediction, resize_for_prediction))
+            pred_img_path = img_path  # Still use original path, but will pass resized image
+            # Save temporary resized image for prediction
+            temp_pred_path = output_dir / f"temp_{img_path.name}"
+            cv2.imwrite(str(temp_pred_path), img_for_pred)
+            pred_img_path_str = str(temp_pred_path)
+        else:
+            pred_img_path_str = str(img_path)
         
         # Find crop coordinates or use YOLO detection
         coords = None
@@ -122,8 +138,27 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
         else:
             print(f"  Using manual crop coordinates")
         
-        # Predict state
-        pred_state, confidence, all_probs = trainer.predict(str(img_path))
+        # Predict state using resized image
+        pred_state, confidence, all_probs = trainer.predict(pred_img_path_str)
+        
+        # Remove temporary file if created
+        if resize_for_prediction and Path(pred_img_path_str).exists():
+            Path(pred_img_path_str).unlink()
+        
+        # Use original image for visualization
+        img = original_img
+        
+        # Scale coordinates back to original image size if we resized
+        if coords and resize_for_prediction:
+            h_orig, w_orig = img.shape[:2]
+            scale_x = w_orig / resize_for_prediction
+            scale_y = h_orig / resize_for_prediction
+            coords = {
+                'x1': int(coords['x1'] * scale_x),
+                'y1': int(coords['y1'] * scale_y),
+                'x2': int(coords['x2'] * scale_x),
+                'y2': int(coords['y2'] * scale_y)
+            }
         
         # Get ground truth if available (from filename)
         true_state = None
@@ -261,7 +296,8 @@ def main():
             output_dir='./veri_results_marked',
             crop_coords_file='./pics_cropped/crop_coords.json',
             show_ground_truth=True,
-            output_width=1280  # Consistent width for all output images
+            output_width=1280,  # Consistent width for all output images
+            resize_for_prediction=224  # Resize to match training dimensions
         )
         
         if predictions:

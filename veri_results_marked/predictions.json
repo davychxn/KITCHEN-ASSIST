@@ -1,51 +1,33 @@
 [
   {
-    "filename": "Clipboard_12-06-2025_01.jpg",
-    "predicted_state": "on_fire",
-    "confidence": 0.7449465394020081,
-    "all_probabilities": {
-      "boiling": 0.01413009688258171,
-      "normal": 0.10418972373008728,
-      "on_fire": 0.7449465394020081,
-      "smoking": 0.13673366606235504
-    },
-    "detection_method": "YOLO",
-    "detection_bbox": {
-      "x1": 30,
-      "y1": 17,
-      "x2": 493,
-      "y2": 399
-    }
-  },
-  {
     "filename": "cooking-pot_normal_01.jpg",
     "predicted_state": "normal",
-    "confidence": 0.8543605804443359,
+    "confidence": 0.3622560501098633,
     "all_probabilities": {
-      "boiling": 0.09397061169147491,
-      "normal": 0.8543605804443359,
-      "on_fire": 0.027515558525919914,
-      "smoking": 0.02415320836007595
+      "boiling": 0.31051990389823914,
+      "normal": 0.3622560501098633,
+      "on_fire": 0.05394609272480011,
+      "smoking": 0.27327799797058105
     },
     "detection_method": "YOLO",
     "true_state": "normal",
     "correct": true,
     "detection_bbox": {
-      "x1": 4,
-      "y1": 1,
-      "x2": 1923,
-      "y2": 1532
+      "x1": 17,
+      "y1": 60,
+      "x2": 1107,
+      "y2": 1116
     }
   },
   {
     "filename": "frying-pan_boiling_01.jpg",
     "predicted_state": "boiling",
-    "confidence": 0.8820955753326416,
+    "confidence": 0.6648282408714294,
     "all_probabilities": {
-      "boiling": 0.8820955753326416,
-      "normal": 0.0757262110710144,
-      "on_fire": 0.016595419496297836,
-      "smoking": 0.025582781061530113
+      "boiling": 0.6648282408714294,
+      "normal": 0.12461701780557632,
+      "on_fire": 0.11275861412286758,
+      "smoking": 0.09779616445302963
     },
     "detection_method": "YOLO",
     "true_state": "boiling",
@@ -54,41 +36,41 @@
   {
     "filename": "frying-pan_on-fire_01.jpg",
     "predicted_state": "on_fire",
-    "confidence": 0.5609957575798035,
+    "confidence": 0.5431622862815857,
     "all_probabilities": {
-      "boiling": 0.014694306999444962,
-      "normal": 0.21322955191135406,
-      "on_fire": 0.5609957575798035,
-      "smoking": 0.21108035743236542
+      "boiling": 0.0650220513343811,
+      "normal": 0.08934864401817322,
+      "on_fire": 0.5431622862815857,
+      "smoking": 0.3024669885635376
     },
     "detection_method": "YOLO",
     "true_state": "on_fire",
     "correct": true,
     "detection_bbox": {
-      "x1": 7,
-      "y1": 501,
-      "x2": 268,
-      "y2": 677
+      "x1": 66,
+      "y1": 34,
+      "x2": 1100,
+      "y2": 821
     }
   },
   {
     "filename": "frying-pan_smoking_01.jpg",
     "predicted_state": "smoking",
-    "confidence": 0.9347954988479614,
+    "confidence": 0.42762139439582825,
     "all_probabilities": {
-      "boiling": 0.008583607152104378,
-      "normal": 0.004253791645169258,
-      "on_fire": 0.05236714705824852,
-      "smoking": 0.9347954988479614
+      "boiling": 0.26031816005706787,
+      "normal": 0.12447604537010193,
+      "on_fire": 0.18758441507816315,
+      "smoking": 0.42762139439582825
     },
     "detection_method": "YOLO",
     "true_state": "smoking",
     "correct": true,
     "detection_bbox": {
-      "x1": 242,
-      "y1": 29,
-      "x2": 987,
-      "y2": 681
+      "x1": 1296,
+      "y1": 103,
+      "x2": 5287,
+      "y2": 2432
     }
   }
 ]

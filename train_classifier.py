@@ -29,12 +29,13 @@ class PanPotDataset(Dataset):
         self.augment = augment
         
         # Additional augmentation transforms
+        # CRITICAL: Minimal color jitter to preserve red/orange (on-fire) vs gray (smoking) distinction
         if augment:
             self.aug_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation(15),
-                transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
-                transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+                transforms.RandomRotation(10),  # Reduced rotation
+                transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.1, hue=0.02),  # Minimal color change
+                transforms.RandomAffine(degrees=0, translate=(0.08, 0.08), scale=(0.92, 1.08)),
             ])
     
     def __len__(self):
@@ -64,7 +65,7 @@ class StateClassifier(nn.Module):
     Uses transfer learning with pre-trained backbone
     """
     
-    def __init__(self, num_classes=4, backbone='resnet50', pretrained=True):
+    def __init__(self, num_classes=4, backbone='mobilenet_v2', pretrained=True):
         super(StateClassifier, self).__init__()
         
         self.backbone_name = backbone
@@ -77,6 +78,18 @@ class StateClassifier(nn.Module):
             self.backbone = models.resnet18(pretrained=pretrained)
             num_features = self.backbone.fc.in_features
             self.backbone.fc = nn.Identity()
+        elif backbone == 'mobilenet_v2':
+            self.backbone = models.mobilenet_v2(pretrained=pretrained)
+            num_features = self.backbone.classifier[1].in_features
+            self.backbone.classifier = nn.Identity()
+        elif backbone == 'mobilenet_v3_small':
+            self.backbone = models.mobilenet_v3_small(pretrained=pretrained)
+            num_features = self.backbone.classifier[3].in_features
+            self.backbone.classifier = nn.Identity()
+        elif backbone == 'mobilenet_v3_large':
+            self.backbone = models.mobilenet_v3_large(pretrained=pretrained)
+            num_features = self.backbone.classifier[3].in_features
+            self.backbone.classifier = nn.Identity()
         elif backbone == 'efficientnet_b0':
             self.backbone = models.efficientnet_b0(pretrained=pretrained)
             num_features = self.backbone.classifier[1].in_features
@@ -84,13 +97,20 @@ class StateClassifier(nn.Module):
         else:
             raise ValueError(f"Unsupported backbone: {backbone}")
         
-        # Classifier head
+        # Enhanced classifier head for better feature discrimination
+        # More capacity to learn color-critical distinctions (on-fire vs smoking)
+        # Reduced dropout to allow model to learn more from small dataset
         self.classifier = nn.Sequential(
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),  # Reduced dropout for small dataset
             nn.Linear(num_features, 512),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(512, num_classes)
+            nn.BatchNorm1d(512),
+            nn.Dropout(0.4),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.2),  # Lower dropout in final layer
+            nn.Linear(256, num_classes)
         )
     
     def forward(self, x):
@@ -437,10 +457,16 @@ def main():
     
     # Configuration
     DATA_DIR = './pics'
-    EPOCHS = 100
+    EPOCHS = 200  # More epochs for better convergence
     BATCH_SIZE = 4  # Small batch for small dataset
-    LEARNING_RATE = 0.0001
-    BACKBONE = 'resnet18'  # Smaller model for small dataset
+    LEARNING_RATE = 0.00008  # Lower LR for fine color discrimination
+    BACKBONE = 'mobilenet_v2'  # Lightweight and efficient model
+    
+    print(f"Using backbone: {BACKBONE}")
+    print(f"Training config: {EPOCHS} epochs, batch size {BATCH_SIZE}, LR {LEARNING_RATE}")
+    print("Note: Minimal color augmentation to preserve on-fire (red/orange) vs smoking (gray) distinction")
+    print("Available backbones: resnet18, resnet50, mobilenet_v2, mobilenet_v3_small, mobilenet_v3_large, efficientnet_b0")
+    print()
     
     # Create trainer
     trainer = StateClassifierTrainer(
