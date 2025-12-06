@@ -2,75 +2,81 @@
   {
     "filename": "cooking-pot_normal_01.jpg",
     "predicted_state": "normal",
-    "confidence": 0.3622560501098633,
+    "confidence": 0.36225610971450806,
     "all_probabilities": {
-      "boiling": 0.31051990389823914,
-      "normal": 0.3622560501098633,
-      "on_fire": 0.05394609272480011,
-      "smoking": 0.27327799797058105
+      "boiling": 0.310519814491272,
+      "normal": 0.36225610971450806,
+      "on_fire": 0.05394603684544563,
+      "smoking": 0.27327802777290344
     },
-    "detection_method": "YOLO",
+    "detection_method": "Circle Detection Circle (r=232)",
     "true_state": "normal",
     "correct": true,
     "detection_bbox": {
-      "x1": 17,
-      "y1": 60,
-      "x2": 1107,
-      "y2": 1116
+      "x1": 64,
+      "y1": 51,
+      "x2": 1015,
+      "y2": 1002
     }
   },
   {
     "filename": "frying-pan_boiling_01.jpg",
     "predicted_state": "boiling",
-    "confidence": 0.6648282408714294,
+    "confidence": 0.6648281812667847,
     "all_probabilities": {
-      "boiling": 0.6648282408714294,
-      "normal": 0.12461701780557632,
-      "on_fire": 0.11275861412286758,
-      "smoking": 0.09779616445302963
+      "boiling": 0.6648281812667847,
+      "normal": 0.12461695820093155,
+      "on_fire": 0.11275862902402878,
+      "smoking": 0.09779617935419083
     },
-    "detection_method": "YOLO",
+    "detection_method": "Circle Detection Circle (r=197)",
     "true_state": "boiling",
-    "correct": true
+    "correct": true,
+    "detection_bbox": {
+      "x1": 381,
+      "y1": 220,
+      "x2": 1189,
+      "y2": 1029
+    }
   },
   {
     "filename": "frying-pan_on-fire_01.jpg",
     "predicted_state": "on_fire",
-    "confidence": 0.5431622862815857,
+    "confidence": 0.5431624054908752,
     "all_probabilities": {
-      "boiling": 0.0650220513343811,
+      "boiling": 0.06502200663089752,
       "normal": 0.08934864401817322,
-      "on_fire": 0.5431622862815857,
-      "smoking": 0.3024669885635376
+      "on_fire": 0.5431624054908752,
+      "smoking": 0.3024669587612152
     },
-    "detection_method": "YOLO",
+    "detection_method": "Circle Detection Circle (r=231)",
     "true_state": "on_fire",
     "correct": true,
     "detection_bbox": {
-      "x1": 66,
-      "y1": 34,
-      "x2": 1100,
-      "y2": 821
+      "x1": 214,
+      "y1": 0,
+      "x2": 1160,
+      "y2": 720
     }
   },
   {
     "filename": "frying-pan_smoking_01.jpg",
     "predicted_state": "smoking",
-    "confidence": 0.42762139439582825,
+    "confidence": 0.4276215434074402,
     "all_probabilities": {
-      "boiling": 0.26031816005706787,
-      "normal": 0.12447604537010193,
-      "on_fire": 0.18758441507816315,
-      "smoking": 0.42762139439582825
+      "boiling": 0.2603180408477783,
+      "normal": 0.12447600066661835,
+      "on_fire": 0.18758445978164673,
+      "smoking": 0.4276215434074402
     },
-    "detection_method": "YOLO",
+    "detection_method": "Circle Detection Circle (r=261)",
     "true_state": "smoking",
     "correct": true,
     "detection_bbox": {
-      "x1": 1296,
-      "y1": 103,
-      "x2": 5287,
-      "y2": 2432
+      "x1": 128,
+      "y1": 385,
+      "x2": 2700,
+      "y2": 2100
     }
   }
 ]

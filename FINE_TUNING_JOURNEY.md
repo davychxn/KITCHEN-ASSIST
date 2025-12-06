@@ -97,6 +97,76 @@ Inconsistent input dimensions between training and inference could cause predict
 - Accurate wireframe positioning on original images
 - Eliminated dimension-related prediction errors
 
+## Detection Accuracy Improvement: Hybrid Approach
+
+### Problem
+Initial YOLO-based detection produced **oversized bounding boxes** around pots/pans:
+- YOLO detected pots as "bowls" but with inaccurate boundaries
+- Bounding boxes included unnecessary surrounding areas
+- General-purpose object detectors not optimized for circular cookware in top-down views
+
+### Key Insight
+> Pots and pans have **clear circular outlines** and **distinct colors** from their surroundings.
+
+This geometric characteristic makes them ideal candidates for **circle detection** rather than general object detection.
+
+### Solution: 3-Tier Hybrid Detection System
+
+**Implementation Priority**:
+1. **Circle Detection (Primary)** - Hough Circle Transform
+   - Exploits circular geometry of pots/pans
+   - 92% margin for tight fit around circular boundaries
+   - Parameters tuned to avoid false circles (bubbles, steam):
+     - `minDist=150`: Large distance between circle centers
+     - `param2=35`: Higher accumulator threshold
+     - `minRadius=80`, `maxRadius=280`: Reasonable pot/pan sizes
+
+2. **YOLO v8n (Fallback)**
+   - Activates only when circle detection fails
+   - 85% margin applied for tighter fit
+   - Cookware class filtering (bowls, cups, etc.)
+
+3. **Manual Coordinates (Override)**
+   - User-defined regions take precedence
+   - Useful for edge cases
+
+**Code Implementation**:
+```python
+def detect_with_circles(image_path, min_radius=80, max_radius=280, margin=0.92):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (9, 9), 2)
+    
+    circles = cv2.HoughCircles(
+        blurred, cv2.HOUGH_GRADIENT,
+        dp=1, minDist=150,
+        param1=50, param2=35,
+        minRadius=min_radius, maxRadius=max_radius
+    )
+    
+    # Return largest circle (most likely the pan/pot)
+    if circles is not None:
+        largest = max(circles[0], key=lambda c: c[2])
+        x, y, r = largest
+        r_bbox = int(r * margin)
+        return {'x1': x-r_bbox, 'y1': y-r_bbox, 
+                'x2': x+r_bbox, 'y2': y+r_bbox}
+```
+
+**Results**:
+- ✅ **Tighter bounding boxes** around actual cookware
+- ✅ **100% circle detection success** on verification set
+- ✅ **Maintained classification accuracy** (100%)
+- ✅ **Leverages geometric properties** specific to cookware
+
+### Why Not YOLOv3?
+YOLOv8n is actually **superior to YOLOv3**:
+- **7-15x faster** inference speed
+- **Higher accuracy** (better mAP scores)
+- **Smaller model** size (6MB vs 200MB)
+- **More recent** architecture (2023 vs 2018)
+
+The issue wasn't the YOLO version—it was using a **general-purpose detector** for a **geometry-specific task**.
+
 ## Training Configuration
 
 ### Final Hyperparameters
@@ -201,11 +271,16 @@ ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1)
 
 This project successfully achieved:
 - ✅ **100% training accuracy** across all 4 classes
+- ✅ **100% verification accuracy** (4/4 images)
 - ✅ **Solved critical on-fire misclassification** through color preservation
 - ✅ **68% model size reduction** while maintaining performance
+- ✅ **Hybrid detection system** with accurate bounding boxes
 - ✅ **Production-ready system** with visual feedback and documentation
 
-The key breakthrough was recognizing that color information was being destroyed by aggressive augmentation, demonstrating the importance of domain understanding in hyperparameter tuning.
+The key breakthroughs were:
+1. Recognizing that **color information** was being destroyed by aggressive augmentation
+2. Understanding that **geometric properties** (circular outlines) make pots/pans ideal for circle detection
+3. Demonstrating the importance of **domain understanding** in both hyperparameter tuning and algorithm selection.
 
 ---
 

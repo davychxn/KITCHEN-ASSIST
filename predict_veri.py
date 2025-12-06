@@ -1,6 +1,7 @@
 """
 Official Predictor for Verification Images
 Predicts pan/pot states for images in veri_pics folder and marks detected areas
+Uses hybrid detection: Circle detection (primary) + YOLO (fallback)
 """
 
 import torch
@@ -13,13 +14,70 @@ import json
 from ultralytics import YOLO
 
 
+def detect_with_circles(image_path, min_radius=80, max_radius=280, margin=0.92):
+    """
+    Detect circular pots/pans using Hough Circle Transform
+    More accurate for top-down circular cookware
+    
+    Args:
+        image_path: Path to image
+        min_radius: Minimum circle radius in pixels
+        max_radius: Maximum circle radius in pixels
+        margin: Bbox margin around circle (0.92 = tight fit)
+        
+    Returns:
+        Bounding box dict or None
+    """
+    try:
+        img = cv2.imread(str(image_path))
+        if img is None:
+            return None
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (9, 9), 2)
+        
+        # Detect circles
+        circles = cv2.HoughCircles(
+            blurred,
+            cv2.HOUGH_GRADIENT,
+            dp=1,
+            minDist=150,  # Large distance to avoid detecting bubbles/steam
+            param1=50,
+            param2=35,    # Higher threshold = fewer false circles
+            minRadius=min_radius,
+            maxRadius=max_radius
+        )
+        
+        if circles is not None:
+            circles = np.round(circles[0, :]).astype("int")
+            # Get largest circle (most likely to be the pan/pot)
+            largest = max(circles, key=lambda c: c[2])
+            x, y, r = largest
+            
+            # Convert to bbox with margin
+            r_bbox = int(r * margin)
+            bbox = {
+                'x1': max(0, x - r_bbox),
+                'y1': max(0, y - r_bbox),
+                'x2': x + r_bbox,
+                'y2': y + r_bbox
+            }
+            return bbox, f"Circle (r={r})"
+    except Exception as e:
+        print(f"    Circle detection error: {e}")
+    
+    return None, None
+
+
 def predict_veri_images(model_path='pan_pot_classifier.pth', 
                         veri_dir='./veri_pics', 
                         output_dir='./veri_results_marked',
                         crop_coords_file='./pics_cropped/crop_coords.json',
                         show_ground_truth=True,
                         output_width=1280,
-                        resize_for_prediction=224):
+                        resize_for_prediction=224,
+                        bbox_margin=0.85,
+                        yolo_conf_threshold=0.4):
     """
     Predict states for verification images and mark detected areas with green wireframes
     
@@ -31,6 +89,8 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
         show_ground_truth: Whether to show ground truth labels (if filename contains state)
         output_width: Target width for output images (height auto-calculated to maintain aspect ratio)
         resize_for_prediction: Resize images to this size before prediction (to match training, 224 for MobileNet)
+        bbox_margin: Shrink bbox by this factor to get tighter fit (0.85 = reduce each side by 7.5%)
+        yolo_conf_threshold: YOLO confidence threshold (lower=more detections, higher=fewer but more confident)
     """
     
     output_dir = Path(output_dir)
@@ -106,31 +166,83 @@ def predict_veri_images(model_path='pan_pot_classifier.pth',
         else:
             pred_img_path_str = str(img_path)
         
-        # Find crop coordinates or use YOLO detection
+        # Find crop coordinates - try multiple detection methods
         coords = None
-        detection_method = "YOLO"
+        detection_method = "Unknown"
         
-        # Check if we have manual crop coordinates
+        # Method 1: Check if we have manual crop coordinates
         for key, value in crop_coords.items():
             if Path(key).name == img_path.name:
                 coords = value
                 detection_method = "Manual Crop"
+                print(f"  Using manual crop coordinates")
                 break
         
-        # If no manual coords, use YOLO to detect
+        # Method 2: Try circle detection (best for circular pots/pans)
         if coords is None:
+            print(f"  Trying circle detection...")
+            coords, circle_info = detect_with_circles(str(img_path))
+            if coords:
+                detection_method = f"Circle Detection {circle_info}"
+                print(f"  ✓ {circle_info}: ({coords['x1']}, {coords['y1']}) to ({coords['x2']}, {coords['y2']})")
+        
+        # Method 3: Fallback to YOLO if circle detection fails
+        if coords is None:
+            print(f"  Trying YOLO detection...")
             try:
-                yolo_results = yolo_model(str(img_path), verbose=False)
+                # YOLO classes relevant to cookware (COCO dataset):
+                # 39: bottle, 41: cup, 42: fork, 43: knife, 44: spoon, 45: bowl
+                # 46-50: various food containers
+                # We'll prioritize bowl-like objects but allow any detection
+                yolo_results = yolo_model(str(img_path), conf=yolo_conf_threshold, verbose=False)
                 if len(yolo_results) > 0 and len(yolo_results[0].boxes) > 0:
-                    # Use the largest detected object
                     boxes = yolo_results[0].boxes
-                    areas = [(box.xyxy[0][2] - box.xyxy[0][0]) * (box.xyxy[0][3] - box.xyxy[0][1]) 
-                             for box in boxes]
-                    largest_idx = np.argmax(areas)
-                    box = boxes[largest_idx]
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    coords = {'x1': int(x1), 'y1': int(y1), 'x2': int(x2), 'y2': int(y2)}
-                    print(f"  Detected area: ({coords['x1']}, {coords['y1']}) to ({coords['x2']}, {coords['y2']})")
+                    
+                    # Prefer cookware-related classes (bowls, cups, etc.)
+                    cookware_classes = [39, 41, 45, 46, 47]  # bottle, cup, bowl, etc.
+                    cookware_boxes = []
+                    other_boxes = []
+                    
+                    for box in boxes:
+                        cls_id = int(box.cls[0])
+                        if cls_id in cookware_classes:
+                            cookware_boxes.append(box)
+                        else:
+                            other_boxes.append(box)
+                    
+                    # Prefer cookware classes, fallback to any detection
+                    candidate_boxes = cookware_boxes if cookware_boxes else other_boxes
+                    
+                    if candidate_boxes:
+                        # Use the largest detected object
+                        areas = [(box.xyxy[0][2] - box.xyxy[0][0]) * (box.xyxy[0][3] - box.xyxy[0][1]) 
+                                 for box in candidate_boxes]
+                        largest_idx = np.argmax(areas)
+                        box = candidate_boxes[largest_idx]
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        
+                        # Apply margin to make bbox tighter around actual cookware
+                        # Calculate center and dimensions
+                        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+                        w, h = x2 - x1, y2 - y1
+                        
+                        # Reduce dimensions by margin factor
+                        new_w, new_h = w * bbox_margin, h * bbox_margin
+                        
+                        # Calculate new coordinates
+                        x1 = cx - new_w / 2
+                        y1 = cy - new_h / 2
+                        x2 = cx + new_w / 2
+                        y2 = cy + new_h / 2
+                        
+                        coords = {'x1': int(x1), 'y1': int(y1), 'x2': int(x2), 'y2': int(y2)}
+                        class_id = int(box.cls[0])
+                        conf = float(box.conf[0])
+                        detection_method = f"YOLO (class {class_id}, conf {conf:.2f})"
+                        print(f"  ✓ YOLO detected (class {class_id}, conf {conf:.2f}): ({coords['x1']}, {coords['y1']}) to ({coords['x2']}, {coords['y2']})")
+                        print(f"  Applied {bbox_margin:.1%} margin for tighter fit")
+                    else:
+                        print(f"  ⚠ Warning: No objects detected by YOLO")
                 else:
                     print(f"  ⚠ Warning: No objects detected by YOLO")
             except Exception as e:
@@ -288,6 +400,14 @@ def main():
     print("\n" + "="*70)
     print("Pan/Pot State Predictor - Verification Images")
     print("="*70)
+    print("\nConfiguration:")
+    print("  - Model: MobileNet v2 (pan_pot_classifier.pth)")
+    print("  - Detection: Hybrid approach")
+    print("    1. Circle Detection (primary) - best for circular cookware")
+    print("    2. YOLO v8n (fallback) - general object detection")
+    print("  - Circle margin: 92% (tight fit around circular pots/pans)")
+    print("  - YOLO bbox margin: 85% (if circle detection fails)")
+    print("  - Resize for prediction: 224x224\n")
     
     try:
         predictions = predict_veri_images(
@@ -297,7 +417,9 @@ def main():
             crop_coords_file='./pics_cropped/crop_coords.json',
             show_ground_truth=True,
             output_width=1280,  # Consistent width for all output images
-            resize_for_prediction=224  # Resize to match training dimensions
+            resize_for_prediction=224,  # Resize to match training dimensions
+            bbox_margin=0.85,  # Reduce bbox size by 15% for tighter fit around cookware
+            yolo_conf_threshold=0.4  # YOLO confidence threshold
         )
         
         if predictions:

@@ -67,6 +67,36 @@ Use the official predictor for verification images:
 python predict_veri.py
 ```
 
+**Hybrid Detection System** (Accurate for Circular Cookware):
+
+The system uses a **3-tier detection approach** for optimal accuracy:
+
+1. **Circle Detection (Primary)** - Hough Circle Transform
+   - ✅ Best for circular pots/pans in top-down views
+   - ✅ 92% margin for tight fit around circular boundaries
+   - ✅ Leverages clear circular outlines and color contrast
+   - ✅ Filters out bubbles/steam using large minDist
+
+2. **YOLO v8n (Fallback)** - General object detection
+   - Uses when circle detection fails
+   - Applies 85% margin for tighter fit
+   - Prioritizes cookware-related COCO classes
+
+3. **Manual Coordinates (Override)** - User-defined regions
+   - Takes precedence if available
+
+**Why Circle Detection?**
+> You're absolutely right - pots/pans have **clear circular outlines** and **distinct colors** from surroundings. Circle detection exploits these geometric features for more accurate bounding boxes than general-purpose object detectors.
+
+**Customization**:
+```python
+predict_veri_images(
+    bbox_margin=0.85,  # For YOLO fallback
+    yolo_conf_threshold=0.5  # Higher confidence = fewer detections
+)
+# Circle detection parameters are in detect_with_circles() function
+```
+
 This will:
 - Load the trained MobileNet v2 classifier (`pan_pot_classifier.pth`)
 - Process all images in `./veri_pics` folder

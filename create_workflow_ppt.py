@@ -126,9 +126,9 @@ def create_workflow_presentation():
     # Add stats
     stats_y = Inches(4.8)
     stats = [
-        ("100% Training Accuracy", (76, 175, 80)),
-        ("MobileNet v2 - 3.5M Params", (33, 150, 243)),
-        ("Color-Optimized Detection", (255, 152, 0))
+        ("100% Training & Verification", (76, 175, 80)),
+        ("Hybrid Circle + YOLO Detection", (33, 150, 243)),
+        ("MobileNet v2 - 3.5M Params", (255, 152, 0))
     ]
     
     x_start = Inches(2.5)
@@ -202,7 +202,7 @@ def create_workflow_presentation():
     x2 = x1 + box_width + x_spacing
     box2 = add_rounded_rectangle(
         slide2, x2, y_start, box_width, box_height,
-        "Object Detection\n(YOLO v8)", color_detect
+        "Object Detection\n(Circle + YOLO)", color_detect
     )
     
     # Step 3: State Classification
@@ -406,10 +406,10 @@ def create_workflow_presentation():
     
     # Features
     features = [
-        ("🎯 Automatic Detection", "YOLO v8 for pan/pot localization"),
+        ("🎯 Hybrid Detection", "Circle detection + YOLO v8 fallback"),
         ("🧠 Lightweight Model", "MobileNet v2 (3.5M params)"),
-        ("📊 High Accuracy", "100% on training set"),
-        ("🖼️ Visual Feedback", "Green wireframe marking"),
+        ("📊 High Accuracy", "100% training & verification"),
+        ("🖼️ Accurate Wireframes", "Tight fit around circular cookware"),
         ("🎨 Color Optimized", "Preserves critical color features"),
         ("⚡ Fast Inference", "Optimized for edge devices")
     ]
