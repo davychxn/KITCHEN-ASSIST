@@ -6,8 +6,9 @@ An AI-powered kitchen safety system that detects pans and pots on stoves using Y
 
 ## Chinese Patent
 
-Status: Published, Not Authorized
-Publish ID: CN118552788A
+Status: `Published, Not Authorized`
+
+Publish ID: `CN118552788A`
 
 [Chinese Patent Official Registry](https://pss-system.cponline.cnipa.gov.cn/conventionalSearch)
 

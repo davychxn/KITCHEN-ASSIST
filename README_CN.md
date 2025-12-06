@@ -6,8 +6,9 @@
 
 ## 中国发明专利
 
-状态： 已公开，未授权
-公开号： CN118552788A
+状态： `已公开，未授权`
+
+公开号： `CN118552788A`
 
 [中国知识产权局专利检索](https://pss-system.cponline.cnipa.gov.cn/conventionalSearch)
 
