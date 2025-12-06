@@ -1,5 +1,7 @@
 # Pan/Pot State Detection System
 
+[中文说明](./README_CN.md)
+
 An AI-powered kitchen safety system that detects pans and pots on stoves using YOLO v8, then classifies their cooking state into four categories: **normal**, **boiling**, **smoking**, and **on_fire**.
 
 ## System Architecture
