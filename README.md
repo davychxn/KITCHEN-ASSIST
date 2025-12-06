@@ -4,14 +4,6 @@
 
 An AI-powered kitchen safety system that detects pans and pots on stoves using YOLO v8, then classifies their cooking state into four categories: **normal**, **boiling**, **smoking**, and **on_fire**.
 
-## Chinese Patent
-
-Status: `Published, Not Authorized`
-
-Publish ID: `CN118552788A`
-
-[Chinese Patent Official Registry](https://pss-system.cponline.cnipa.gov.cn/conventionalSearch)
-
 ## System Architecture
 
 1. **Object Detection**: YOLOv8n for automatic pan/pot localization
