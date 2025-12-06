@@ -1,0 +1,94 @@
+[
+  {
+    "filename": "Clipboard_12-06-2025_01.jpg",
+    "predicted_state": "on_fire",
+    "confidence": 0.7449465394020081,
+    "all_probabilities": {
+      "boiling": 0.01413009688258171,
+      "normal": 0.10418972373008728,
+      "on_fire": 0.7449465394020081,
+      "smoking": 0.13673366606235504
+    },
+    "detection_method": "YOLO",
+    "detection_bbox": {
+      "x1": 30,
+      "y1": 17,
+      "x2": 493,
+      "y2": 399
+    }
+  },
+  {
+    "filename": "cooking-pot_normal_01.jpg",
+    "predicted_state": "normal",
+    "confidence": 0.8543605804443359,
+    "all_probabilities": {
+      "boiling": 0.09397061169147491,
+      "normal": 0.8543605804443359,
+      "on_fire": 0.027515558525919914,
+      "smoking": 0.02415320836007595
+    },
+    "detection_method": "YOLO",
+    "true_state": "normal",
+    "correct": true,
+    "detection_bbox": {
+      "x1": 4,
+      "y1": 1,
+      "x2": 1923,
+      "y2": 1532
+    }
+  },
+  {
+    "filename": "frying-pan_boiling_01.jpg",
+    "predicted_state": "boiling",
+    "confidence": 0.8820955753326416,
+    "all_probabilities": {
+      "boiling": 0.8820955753326416,
+      "normal": 0.0757262110710144,
+      "on_fire": 0.016595419496297836,
+      "smoking": 0.025582781061530113
+    },
+    "detection_method": "YOLO",
+    "true_state": "boiling",
+    "correct": true
+  },
+  {
+    "filename": "frying-pan_on-fire_01.jpg",
+    "predicted_state": "on_fire",
+    "confidence": 0.5609957575798035,
+    "all_probabilities": {
+      "boiling": 0.014694306999444962,
+      "normal": 0.21322955191135406,
+      "on_fire": 0.5609957575798035,
+      "smoking": 0.21108035743236542
+    },
+    "detection_method": "YOLO",
+    "true_state": "on_fire",
+    "correct": true,
+    "detection_bbox": {
+      "x1": 7,
+      "y1": 501,
+      "x2": 268,
+      "y2": 677
+    }
+  },
+  {
+    "filename": "frying-pan_smoking_01.jpg",
+    "predicted_state": "smoking",
+    "confidence": 0.9347954988479614,
+    "all_probabilities": {
+      "boiling": 0.008583607152104378,
+      "normal": 0.004253791645169258,
+      "on_fire": 0.05236714705824852,
+      "smoking": 0.9347954988479614
+    },
+    "detection_method": "YOLO",
+    "true_state": "smoking",
+    "correct": true,
+    "detection_bbox": {
+      "x1": 242,
+      "y1": 29,
+      "x2": 987,
+      "y2": 681
+    }
+  }
+]

@@ -12,6 +12,8 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 import cv2
 from PIL import Image
+import json
+from ultralytics import YOLO
 
 
 def evaluate_model(model_path='pan_pot_classifier.pth', data_dir='./pics'):
@@ -185,6 +187,153 @@ def visualize_predictions(model_path='pan_pot_classifier.pth', data_dir='./pics'
     print(f"\nVisualization saved to: {output_dir}")
 
 
+def visualize_veri_pics_with_crops(model_path='pan_pot_classifier.pth', 
+                                    veri_dir='./veri_pics', 
+                                    output_dir='./veri_results_marked',
+                                    crop_coords_file='./pics_cropped/crop_coords.json'):
+    """
+    Visualize veri_pics images with green wireframes marking the detected areas
+    
+    Args:
+        model_path: Path to trained classifier model
+        veri_dir: Directory containing verification images
+        output_dir: Directory to save marked images
+        crop_coords_file: JSON file with crop coordinates (optional)
+    """
+    
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+    
+    # Try to load crop coordinates if available
+    crop_coords = {}
+    crop_coords_path = Path(crop_coords_file)
+    if crop_coords_path.exists():
+        with open(crop_coords_path, 'r') as f:
+            crop_coords = json.load(f)
+        print(f"Loaded crop coordinates for {len(crop_coords)} images")
+    
+    # Load YOLO for detection
+    print("Loading YOLO model for object detection...")
+    yolo_model = YOLO('yolov8n.pt')
+    
+    # Load classifier
+    trainer = StateClassifierTrainer()
+    trainer.load_model(model_path)
+    
+    # Get all verification images
+    veri_dir = Path(veri_dir)
+    image_files = sorted(list(veri_dir.glob('*.jpg')) + list(veri_dir.glob('*.jpeg')))
+    
+    if len(image_files) == 0:
+        print(f"No images found in {veri_dir}")
+        return
+    
+    print(f"\nProcessing {len(image_files)} verification images...")
+    
+    # Color map for states
+    color_map = {
+        'boiling': (255, 255, 0),   # Cyan
+        'normal': (0, 255, 0),      # Green
+        'on_fire': (0, 0, 255),     # Red
+        'smoking': (128, 128, 128)  # Gray
+    }
+    
+    processed_count = 0
+    
+    for img_path in image_files:
+        # Get ground truth
+        true_state = trainer.parse_filename(img_path.name)
+        if true_state not in trainer.class_to_idx:
+            print(f"Skipping {img_path.name}: unknown state")
+            continue
+        
+        # Load original image
+        img = cv2.imread(str(img_path))
+        if img is None:
+            print(f"Warning: Could not load {img_path}, skipping...")
+            continue
+        
+        # Find crop coordinates or use YOLO detection
+        coords = None
+        
+        # Check if we have manual crop coordinates
+        for key, value in crop_coords.items():
+            if Path(key).name == img_path.name:
+                coords = value
+                break
+        
+        # If no manual coords, use YOLO to detect
+        if coords is None:
+            try:
+                results = yolo_model(str(img_path), verbose=False)
+                if len(results) > 0 and len(results[0].boxes) > 0:
+                    # Use the largest detected object
+                    boxes = results[0].boxes
+                    areas = [(box.xyxy[0][2] - box.xyxy[0][0]) * (box.xyxy[0][3] - box.xyxy[0][1]) 
+                             for box in boxes]
+                    largest_idx = np.argmax(areas)
+                    box = boxes[largest_idx]
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    coords = {'x1': int(x1), 'y1': int(y1), 'x2': int(x2), 'y2': int(y2)}
+            except Exception as e:
+                print(f"Warning: Detection failed for {img_path.name}: {e}")
+        
+        # Predict state
+        pred_state, confidence, all_probs = trainer.predict(str(img_path))
+        
+        # Draw green wireframe for detected area
+        if coords:
+            x1, y1, x2, y2 = coords['x1'], coords['y1'], coords['x2'], coords['y2']
+            # Draw green rectangle with thick line
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+            
+            # Add label
+            label_text = "Detected Area"
+            label_y = max(y1 + 20, 20)
+            cv2.putText(img, label_text, (x1 + 5, label_y),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        
+        # Determine if prediction is correct
+        is_correct = true_state == pred_state
+        
+        # Add prediction information at top
+        y_offset = 30
+        
+        # Background for better text visibility
+        overlay = img.copy()
+        cv2.rectangle(overlay, (0, 0), (img.shape[1], 110), (0, 0, 0), -1)
+        img = cv2.addWeighted(overlay, 0.3, img, 0.7, 0)
+        
+        # True state
+        cv2.putText(img, f"True: {true_state}", (15, y_offset), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 3)
+        cv2.putText(img, f"True: {true_state}", (15, y_offset), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, color_map.get(true_state, (255, 255, 255)), 2)
+        
+        # Predicted state
+        y_offset += 35
+        cv2.putText(img, f"Pred: {pred_state} ({confidence:.2f})", (15, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 3)
+        cv2.putText(img, f"Pred: {pred_state} ({confidence:.2f})", (15, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, color_map.get(pred_state, (255, 255, 255)), 2)
+        
+        # Status
+        y_offset += 35
+        status_text = "✓ CORRECT" if is_correct else "✗ WRONG"
+        status_color = (0, 255, 0) if is_correct else (0, 0, 255)
+        cv2.putText(img, status_text, (15, y_offset),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
+        
+        # Save marked image
+        output_path = output_dir / f"{img_path.stem}_marked.jpg"
+        cv2.imwrite(str(output_path), img)
+        processed_count += 1
+        
+        print(f"  Processed: {img_path.name} → {output_path.name}")
+    
+    print(f"\n{processed_count} verification images marked and saved to: {output_dir}")
+
+
 def main():
     """Main evaluation function"""
     
@@ -205,6 +354,18 @@ def main():
             data_dir='./pics',
             output_dir='./evaluation_results'
         )
+    
+    # Mark verification images with crop areas
+    print("\nMarking verification images with detected areas...")
+    try:
+        visualize_veri_pics_with_crops(
+            model_path='pan_pot_classifier.pth',
+            veri_dir='./veri_pics',
+            output_dir='./veri_results_marked',
+            crop_coords_file='./pics_cropped/crop_coords.json'
+        )
+    except Exception as e:
+        print(f"Error marking verification images: {e}")
     
     print("\nEvaluation complete!")
 
