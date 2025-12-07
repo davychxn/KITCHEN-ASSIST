@@ -1,5 +1,7 @@
 # Model Fine-Tuning Journey
 
+[中文说明](./FINE_TUNING_JOURNEY_CN.md)
+
 This document chronicles the iterative fine-tuning process for the Pan/Pot State Detection classifier, highlighting key challenges, solutions, and insights gained.
 
 ## Initial Setup
